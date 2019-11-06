@@ -16,7 +16,7 @@
 
 ### 1、Titanic: Machine Learning from Disaster
 
-**目录：** kaggle/kaggle_titanic
+**目录：** kaggle/titanic
 
 **比赛说明：** 根据Titanic游客信息对预测游客遇难是否存活
 
@@ -36,7 +36,7 @@
 
 ### 2、House Prices: Advanced Regression Techniques
 
-**目录：** kaggle/kaggle_house_prices
+**目录：** kaggle/house-prices-advanced-regression-techniques
 
 **比赛说明：** 根据住房相关特征预测住房价格
 
