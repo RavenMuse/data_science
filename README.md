@@ -1,5 +1,4 @@
 # Data Science
-[TOC]
 
 ## Deep Learning
 
@@ -58,25 +57,3 @@
 > * Ridge、Lasso、GradientBoostingRegressor、XGBRegressor、SVR、LinearSVR、ElasticNet、BayesianRidge、ExtraTreesRegressor、LGBMRegressor、KernelRidge
 > * 模型调优、模型选择
 > * 多模型栈集成
-
-
-### 3、Home Credit Default Risk
-
-**分支：** kaggle/kaggle_home_credit_default_risk
-
-**比赛说明：** 根据用户信贷数据判断用户是否具有信贷危机
-
-**数据源：** kaggle competitions download -c home-credit-default-risk
-
-**最后提交结果（ROC）：**  无
-
-**特征工程相关：**
-> * 表聚合、关联
-> * 空值填充
-> * 异常处理
-> * 类型编码
-> * 时间惩罚
-
-
-**模型相关：**
-
