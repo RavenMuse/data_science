@@ -1,4 +1,4 @@
-# -*- encoding:utf-8 -*-
+﻿# -*- encoding:utf-8 -*-
 import os
 import csv
 import json
@@ -10,7 +10,7 @@ import plotly
 import operator
 
 from datetime import *
-from pandasql import sqldf
+# from pandasql import sqldf
 from PIL import Image
 from plotly.graph_objs import *
 from scipy import sparse
@@ -20,7 +20,7 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.utils import check_array
 from sklearn.preprocessing import LabelEncoder, Imputer
 from sklearn.model_selection import cross_val_predict, KFold
-from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, accuracy_score
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, accuracy_score, recall_score
 from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix
 from sklearn.model_selection import learning_curve
 
@@ -28,13 +28,14 @@ import matplotlib.pyplot as plt
 
 __author__ = "StoneBox"
 
-plotly.tools.set_credentials_file(username='stone_box', api_key='gtetznvbrbHxbz76ckZZ')
+# plotly.tools.set_credentials_file(username='stone_box', api_key='gtetznvbrbHxbz76ckZZ')
 
 # pysql = lambda q: sqldf(q, globals())
-pysql = sqldf
+# pysql = sqldf
 
 # 设置最大info显示行数
 pd.set_option('display.max_info_columns', 1000)
+pd.set_option('display.max_columns', 1000)
 
 
 def make_dir(path):
@@ -709,58 +710,65 @@ class SKLTools:
         return selected_cols
 
     @staticmethod
-    def binary_classification_model_estimation(model, x_feature, y_true, learning_curve_scoring='accuracy'):
+    def binary_classification_model_estimation(model, x_feature, y_label, cv=3, learning_curve_scoring=None):
         """
         二分类模型评估
         :param model:分类模型
         :param x_feature:
-        :param y_true:
-        :param learning_curve_scoring:学习曲线评估方式（accuracy）,
-            sklearn评估函数（make_scorer(my_scorer(y_true,y_predict))）
-            或返回error的score方法my_scorer(estimator, X, y_true)
+        :param y_label:
+        :param cv:交叉验证数
+        :param learning_curve_scoring: string, callable or None
+           默认: None
+            1、string类型：学习曲线评估方式  "accuracy" ,
+            2、函数句柄：sklearn评估函数 make_scorer(my_scorer(y_label,y_predict))
+            3、函数句柄：返回error的score方法my_scorer(estimator, X, y_label)
+            4、None 不绘制学习曲线
         :return:
         """
         y_probas_forest = cross_val_predict(
-            model, x_feature, y_true, cv=5, method="predict_proba")
+            model, x_feature, y_label, cv=cv, method="predict_proba")
         y_scores_forest = y_probas_forest[:, 1]  # score = proba of positive class
 
         fpr_forest, tpr_forest, thresholds_forest = roc_curve(
-            y_true, y_scores_forest)
+            y_label, y_scores_forest)
         ChartTools.plot_scatter([(fpr_forest, tpr_forest)], traces=["ROC"], title="ROC")
-        print("auc : %f" % roc_auc_score(y_true, y_scores_forest))
+        print("auc : %f" % roc_auc_score(y_label, y_scores_forest))
 
-        y_predict = cross_val_predict(model, x_feature, y_true, cv=5)
-        precisions, recalls, thresholds = precision_recall_curve(y_true, y_predict)
+        y_predict = cross_val_predict(model, x_feature, y_label, cv=cv)
+        precisions, recalls, thresholds = precision_recall_curve(y_label, y_predict)
         ChartTools.plot_scatter([(recalls, precisions)], traces=["PRC"], title="PRC")
-        print('accuracy : %f' % accuracy_score(y_true, y_predict))
+        print('accuracy : %f' % accuracy_score(y_label, y_predict))
+        print('recall : %f' % recall_score(y_label, y_predict))
 
-        train_sizes, train_scores, test_scores = learning_curve(
-            model, x_feature, y_true, cv=5, scoring=learning_curve_scoring)
-        train_scores_mean = np.mean(train_scores, axis=1)
-        test_scores_mean = np.mean(test_scores, axis=1)
+        if learning_curve_scoring:
+            train_sizes, train_scores, test_scores = learning_curve(
+                model, x_feature, y_label, cv=cv, scoring=learning_curve_scoring)
+            train_scores_mean = np.mean(train_scores, axis=1)
+            test_scores_mean = np.mean(test_scores, axis=1)
 
-        title = learning_curve_scoring if (isinstance(learning_curve_scoring, str)) else "scoring"
+            title = learning_curve_scoring if (isinstance(learning_curve_scoring, str)) else "scoring"
 
-        ChartTools.plot_scatter([(train_sizes, train_scores_mean), (train_sizes, test_scores_mean)],
-                                traces=["train_%s" % title, "test_%s" % title],
-                                title="LearningCurve")
+            ChartTools.plot_scatter([(train_sizes, train_scores_mean), (train_sizes, test_scores_mean)],
+                                    traces=["train_%s" % title, "test_%s" % title],
+                                    title="LearningCurve")
 
     @staticmethod
-    def multi_classification_model_estimation(model, x_feature, y_true, learning_curve_scoring='accuracy'):
+    def multi_classification_model_estimation(model, x_feature, y_label, cv=3, learning_curve_scoring='accuracy'):
         """
         多分类模型评估
         :param model:分类模型
         :param x_feature:训练数据
-        :param y_true:训练目标
+        :param y_label:训练目标
+        :param cv:交叉验证数
         :param learning_curve_scoring: 学习曲线评估方式（accuracy）,
-            sklearn评估函数（make_scorer(my_scorer(y_true,y_predict))）
-            或返回error的score方法my_scorer(estimator, X, y_true)
+            sklearn评估函数（make_scorer(my_scorer(y_label,y_predict))）
+            或返回error的score方法my_scorer(estimator, X, y_label)
         :return:
         """
-        y_predict = cross_val_predict(model, x_feature, y_true, cv=5)
-        print('acc:%s' % accuracy_score(y_true, y_predict))
+        y_predict = cross_val_predict(model, x_feature, y_label, cv=cv)
+        print('acc:%s' % accuracy_score(y_label, y_predict))
         train_sizes, train_scores, test_scores = learning_curve(
-            model, x_feature, y_true, cv=5, scoring=learning_curve_scoring)
+            model, x_feature, y_label, cv=cv, scoring=learning_curve_scoring)
         train_scores_mean = np.mean(train_scores, axis=1)
         test_scores_mean = np.mean(test_scores, axis=1)
 
@@ -772,34 +780,35 @@ class SKLTools:
                                 title="LearningCurve")
 
     @staticmethod
-    def regression_model_estimation(model, x_feature, y_true, learning_curve_scoring='neg_mean_squared_error'):
+    def regression_model_estimation(model, x_feature, y_label, cv=3, learning_curve_scoring='neg_mean_squared_error'):
         """
         回归模型评估
         :param model:回归模型
         :param x_feature:训练数据
-        :param y_true:训练目标
+        :param cv:交叉验证数
+        :param y_label:训练目标
         :param learning_curve_scoring:学习曲线评估方式（neg_mean_squared_error）,
-            sklearn评估函数（make_scorer(my_scorer(y_true,y_predict))）
-            或返回error的score方法my_scorer(estimator, X, y_true)
+            sklearn评估函数（make_scorer(my_scorer(y_label,y_predict))）
+            或返回error的score方法my_scorer(estimator, X, y_label)
         :return:
         """
-        y_predict = cross_val_predict(model, x_feature, y_true, cv=5)
-        mse = SKLTools.mean_squared_log_error(y_true, y_predict)
+        y_predict = cross_val_predict(model, x_feature, y_label, cv=cv)
+        mse = SKLTools.mean_squared_log_error(y_label, y_predict)
         print('MSE(Log):%s' % mse)
         print('RMSE(Log):%s' % np.sqrt(mse))
-        print('R2:%s' % r2_score(y_true, y_predict))
+        print('R2:%s' % r2_score(y_label, y_predict))
 
-        train_sizes, train_scores, test_scores = learning_curve(
-            model, x_feature, y_true, cv=5, scoring=learning_curve_scoring)
-        train_scores_mean = np.mean(train_scores, axis=1)
-        test_scores_mean = np.mean(test_scores, axis=1)
+        if learning_curve_scoring:
+            train_sizes, train_scores, test_scores = learning_curve(
+                model, x_feature, y_label, cv=cv, scoring=learning_curve_scoring)
+            train_scores_mean = np.mean(train_scores, axis=1)
+            test_scores_mean = np.mean(test_scores, axis=1)
 
-        title = learning_curve_scoring if (isinstance(learning_curve_scoring, str)) else "scoring"
+            title = learning_curve_scoring if (isinstance(learning_curve_scoring, str)) else "scoring"
 
-        ChartTools.plot_scatter([(train_sizes, train_scores_mean), (train_sizes,
-                                                                    test_scores_mean)],
-                                traces=["train_%s" % title, "test_%s" % title],
-                                title="LearningCurve")
+            ChartTools.plot_scatter([(train_sizes, train_scores_mean), (train_sizes, test_scores_mean)],
+                                    traces=["train_%s" % title, "test_%s" % title],
+                                    title="LearningCurve")
 
     class DataFrameSelector(BaseEstimator, TransformerMixin):
         """
@@ -885,7 +894,7 @@ class SKLTools:
             print('')
             print('初始化 列{} 区间:'.format(self.attribute_col))
             print('- 数据实际区间数: {}'.format(len(self.frequency_matrix_intervals)))
-            print('- 区间分隔点: {}'.format(self.frequency_matrix_intervals))
+            # print('- 区间分隔点: {}'.format(self.frequency_matrix_intervals))
 
         def fit(self, attribute_col):
             """
@@ -903,7 +912,6 @@ class SKLTools:
             smallest = -1
 
             while self.frequency_matrix.shape[0] > self.max_number_intervals:
-
                 chitest = {}
                 shape = self.frequency_matrix.shape
                 for r in range(shape[0] - 1):
@@ -917,15 +925,15 @@ class SKLTools:
 
                 # 总结
                 counter += 1
-                print('')
-                print(
-                    '第 {} 次迭代: 区间数:{} . 最小卡方值:{}, 最大卡方值:{}'.format(counter, self.frequency_matrix.shape[0],
-                                                                   smallest, biggest))
-                print('两两分区卡方值: {}'.format(chitest.keys()))
+                # print('')
+                # print(
+                #     '第 {} 次迭代: 区间数:{} . 最小卡方值:{}, 最大卡方值:{}'.format(counter, self.frequency_matrix.shape[0],
+                #                                                    smallest, biggest))
+                # print('两两分区卡方值: {}'.format(chitest.keys()))
 
                 # 合并操作
                 if smallest <= self.threshold:
-                    print('合并分区(卡方值->分隔点降排索引): chi {} -> {}'.format(smallest, chitest[smallest]))
+                    # print('合并分区(卡方值->分隔点降排索引): chi {} -> {}'.format(smallest, chitest[smallest]))
                     for (lower, upper) in list(
                             reversed(chitest[smallest])):
                         # 合并分区后一个合并至前一个
@@ -939,23 +947,23 @@ class SKLTools:
                         # 删除已合并的分区(分隔点)
                         self.frequency_matrix_intervals = np.delete(self.frequency_matrix_intervals, upper,
                                                                     axis=0)
-                    print('新分区分隔点: ({}):{}'.format(len(self.frequency_matrix_intervals),
-                                                   self.frequency_matrix_intervals))
-
+                    # print('新分区分隔点: ({}):{}'.format(len(self.frequency_matrix_intervals),
+                    #                                self.frequency_matrix_intervals))
                 else:
                     break
 
             chitestvalues = chitest
-            print('结束: (最小卡方值 {} 大于阈值 {})\n'.format(smallest, self.threshold))
+            print('结束: 迭代{}次 ，(最小卡方值 {} 大于阈值 {})\n'.format(counter, smallest, self.threshold))
 
             print('总结：')
             print('{}{}'.format('分隔点: ', self.frequency_matrix_intervals))
             print('{}{}'.format('卡方值: ', ', '.join([
-                                                       '[{}-{}):{:5.1f}'.format(
-                                                           self.frequency_matrix_intervals[v[0][0]],
-                                                           self.frequency_matrix_intervals[v[0][1]], k)
-                                                       for k, v in
-                                                       sort_dict_by_value(chitestvalues, False)])))
+                '[{}-{}):{:5.1f}'.format(
+                    self.frequency_matrix_intervals[v[0][0]],
+                    '最大值' if v[0][1] > len(self.frequency_matrix_intervals) - 1 else self.frequency_matrix_intervals[
+                        v[0][1]],
+                    k)
+                for k, v in sort_dict_by_value(chitestvalues, False)])))
 
             final_frequency = pd.DataFrame(self.frequency_matrix)
 
@@ -963,7 +971,7 @@ class SKLTools:
 
             print('{}\n{}'.format('区间分类频次统计：', final_frequency))
 
-        def transform(self):
+        def transform(self, data_set):
             """
             分箱转化
             :return: pandas.series
@@ -981,7 +989,7 @@ class SKLTools:
                         t = final_intervals.index(i) + 1
                 return t
 
-            return self.sorted_data[self.attribute_col].map(lambda x: get_cate(x))
+            return data_set[self.attribute_col].map(lambda x: get_cate(x))
 
     class CategoricalEncoder(BaseEstimator, TransformerMixin):
         """Encode categorical features as a numeric array.
@@ -1062,7 +1070,7 @@ class SKLTools:
             self.dtype = dtype
             self.handle_unknown = handle_unknown
 
-        def fit(self, X, y=None):
+        def fit(self, X):
             """Fit the CategoricalEncoder to X.
             Parameters
             ----------
