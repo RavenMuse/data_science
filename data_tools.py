@@ -1426,6 +1426,23 @@ class AnalyzeTools:
             data_frame[col] /= data_frame[col].std()
         return data_frame
 
+    @staticmethod
+    def similarity(a, b, n=4):
+        """
+        基于n-grams的jaccard相似度
+        :param a:
+        :param b:
+        :param n:
+        :return:
+        """
+
+        a = set([a[i:i + n] for i in range(len(a) - n)])
+        b = set([b[i:i + n] for i in range(len(b) - n)])
+        a_and_b = a & b
+        if not a_and_b:
+            return 0.
+        a_or_b = a | b
+        return 1. * len(a_and_b) / len(a_or_b)
 
 if __name__ == '__main__':
     # Scatter
