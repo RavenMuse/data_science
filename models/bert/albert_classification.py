@@ -9,11 +9,13 @@ import json
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import keras.backend as K
 from keras.layers import *
 from keras.layers import Layer
-import keras.backend as K
 from keras import initializers, activations
+from keras.callbacks import TensorBoard
 
+from datetime import datetime
 from collections import OrderedDict
 
 from sklearn.metrics import classification_report, accuracy_score, recall_score
@@ -1156,10 +1158,13 @@ class AlbertClassification:
                     self.best_val_acc = val_acc
                     self.model.save_weights('albert_classification_best_model.weights')
 
+        log_name = "albert_classification_{}".format(datetime.now().strftime('%Y.%m.%d-%H:%M:%S'))
+        tensor_board_cb = TensorBoard(log_dir="./tf_log/{}".format(log_name))
+
         self.model.fit_generator(train_generator.forfit(),
                                  steps_per_epoch=len(train_generator),
                                  epochs=epochs,
-                                 callbacks=[Evaluator(self.model, validation_generator)])
+                                 callbacks=[Evaluator(self.model, validation_generator),tensor_board_cb])
 
     def predict(self, data, batch_size=32):
         self.model.load_weights('albert_classification_best_model.weights')
