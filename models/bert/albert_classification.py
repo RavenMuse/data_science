@@ -16,7 +16,7 @@ from keras import initializers, activations
 
 from collections import OrderedDict
 
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score, recall_score
 from sklearn.model_selection import train_test_split
 
 # 设置GPU使用率
@@ -616,6 +616,24 @@ class FeedForward(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
+def similarity(a, b, n=4):
+    """
+    基于n-grams的jaccard相似度
+    :param a:
+    :param b:
+    :param n:
+    :return:
+    """
+
+    a = set([a[i:i + n] for i in range(len(a) - n)])
+    b = set([b[i:i + n] for i in range(len(b) - n)])
+    a_and_b = a & b
+    if not a_and_b:
+        return 0.
+    a_or_b = a | b
+    return 1. * len(a_and_b) / len(a_or_b)
+
+
 def sequence_padding(inputs, length=None, padding=0):
     """
     Numpy函数，将序列padding到同一长度
@@ -1131,6 +1149,9 @@ class AlbertClassification:
                 prediction = self.model.predict(list(validation_x)[0]).argmax(axis=1)
                 print(classification_report(validation_y, prediction))
                 val_acc = accuracy_score(validation_y, prediction)
+                val_rec = recall_score(validation_y, prediction)
+                print("val_acc：", val_acc)
+                print("val_rec：", val_rec)
                 if val_acc > self.best_val_acc:
                     self.best_val_acc = val_acc
                     self.model.save_weights('albert_classification_best_model.weights')
